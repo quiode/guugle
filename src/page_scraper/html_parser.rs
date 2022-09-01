@@ -1,5 +1,5 @@
 /// Parses a string containing html and returns all links
-fn getLinks(html: Html) -> Vec<String> {
+pub fn getLinks(html: Html) -> Vec<String> {
     let splits = html.text.split("<a href=\"");
 
     let mut links: Vec<String> = vec![];

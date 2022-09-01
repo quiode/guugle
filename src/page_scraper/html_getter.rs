@@ -4,7 +4,7 @@ use hyper_tls::HttpsConnector;
 use super::html_parser::Html;
 
 #[derive(Debug)]
-enum HtmlGetterError {
+pub enum HtmlGetterError {
     NotHTML,
     GetError,
 }
@@ -13,7 +13,7 @@ enum HtmlGetterError {
 ///
 /// # Panics
 /// Panics if the uri can't be parsed or the bytes can't be read
-async fn html_getter(link: &str) -> Result<Html, HtmlGetterError> {
+pub async fn html_getter(link: &str) -> Result<Html, HtmlGetterError> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
 

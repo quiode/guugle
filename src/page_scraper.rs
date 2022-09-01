@@ -1,2 +1,2 @@
-mod html_getter;
-mod html_parser;
+pub mod html_getter;
+pub mod html_parser;
