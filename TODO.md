@@ -1,0 +1,5 @@
+- [x] get html
+- [x] get links from html
+- [ ] parse keywords from html
+- [ ] create page rank
+- [ ] go through all links extracted from start-pages and follow them to the next page -> repeat
