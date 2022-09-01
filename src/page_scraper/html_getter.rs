@@ -1,6 +1,8 @@
 use hyper::Client;
 use hyper_tls::HttpsConnector;
 
+use super::html_parser::Html;
+
 #[derive(Debug)]
 enum HtmlGetterError {
     NotHTML,
@@ -11,7 +13,7 @@ enum HtmlGetterError {
 ///
 /// # Panics
 /// Panics if the uri can't be parsed or the bytes can't be read
-async fn html_getter(link: &str) -> Result<String, HtmlGetterError> {
+async fn html_getter(link: &str) -> Result<Html, HtmlGetterError> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
 
@@ -30,7 +32,7 @@ async fn html_getter(link: &str) -> Result<String, HtmlGetterError> {
 
         let text = String::from_utf8(bytes.to_vec()).unwrap();
 
-        return Ok(text);
+        return Ok(Html::new(&text));
     } else {
         return Err(HtmlGetterError::GetError);
     }
@@ -47,7 +49,7 @@ mod tests {
 
         let result = super::html_getter(uri).await.unwrap();
 
-        assert_eq!(result, body);
+        assert_eq!(result.text, body);
     }
 
     #[tokio::test]
@@ -58,6 +60,6 @@ mod tests {
 
         let result = super::html_getter(uri).await.unwrap();
 
-        assert_eq!(result, body);
+        assert_eq!(result.text, body);
     }
 }
