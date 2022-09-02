@@ -1,4 +1,4 @@
 # guugle
-A Webcrawler
+The Webcrawler
 
 ![Logo](./assets/Guugle.png)
