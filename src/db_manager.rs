@@ -1,5 +1,6 @@
 use rusqlite::Connection;
 
+/// creates the default tables and database if it doens't already exist
 fn create_default_tables(sqlite_path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let conn = Connection::open(sqlite_path)?;
 
@@ -15,6 +16,18 @@ fn create_default_tables(sqlite_path: &str) -> Result<(), Box<dyn std::error::Er
     )?;
 
     Ok(())
+}
+
+/// creates an entry in the database for a newly discovered page
+/// returns the id of the entry
+fn unvisited_page(url: &str) -> u64 {
+    todo!()
+}
+
+/// updates the database entry for the page to visited and fills in the required data
+/// the pagerank fiel and the from field gets calculated by the function itself
+fn update_to_visited(id: u64, text: &str, points_to: Vec<&str>) -> u64 {
+    todo!()
 }
 
 #[cfg(test)]
