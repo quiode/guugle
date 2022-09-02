@@ -1,12 +1,14 @@
-use hyper::{Client, Uri};
+use hyper::{Client, StatusCode, Uri};
 use hyper_tls::HttpsConnector;
 
-use super::html_parser::Html;
+use super::html_parser::{is_html, Html};
 
 #[derive(Debug)]
 pub enum HtmlGetterError {
     NotHTML,
     GetError,
+    StatusCode,
+    UrlError,
 }
 
 /// # Returns valid html from a link or an error if the page isn't html
@@ -17,24 +19,48 @@ pub async fn html_getter(link: &str) -> Result<Html, HtmlGetterError> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
 
-    let mut uri: Uri = link.parse().unwrap();
+    let mut uri: Uri;
+    if let Ok(result) = link.parse::<Uri>() {
+        uri = result;
+    } else {
+        return Err(HtmlGetterError::UrlError);
+    }
 
     if uri.scheme().is_none() {
-        uri = (format!("http://{}", link)).parse().unwrap();
+        if let Ok(result) = (format!("http://{}", link)).parse() {
+            uri = result;
+        } else {
+            return Err(HtmlGetterError::UrlError);
+        }
     }
 
     let response = client.get(uri).await;
 
     if let Ok(ok) = response {
+        if ok.status() != StatusCode::OK {
+            return Err(HtmlGetterError::StatusCode);
+        }
+
         let mut response = ok;
 
-        if response.headers()["content-type"] != "text/html; charset=UTF-8" {
+        if !response.headers().contains_key("content-type")
+            && !response.headers()["content-type"]
+                .to_str()
+                .unwrap()
+                .contains("html")
+        {
+            eprintln!("{:?}", response.headers());
             return Err(HtmlGetterError::NotHTML);
         }
 
         let bytes = hyper::body::to_bytes(response.body_mut()).await.unwrap();
 
         let text = String::from_utf8(bytes.to_vec()).unwrap();
+
+        if !is_html(&text) {
+            eprintln!("{text}");
+            return Err(HtmlGetterError::NotHTML);
+        }
 
         return Ok(Html::new(&text));
     } else {
