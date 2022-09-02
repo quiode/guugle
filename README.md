@@ -1,4 +1,4 @@
 # guugle
-<p style="text-align:center">Webcrawler</p>
+A Webcrawler
 
-<div style="display:flex"><img src="./assets/Guugle.png" style="justify-content:center"></img></div>
+![Logo](./assets/Guugle.png)
