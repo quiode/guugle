@@ -1,0 +1,42 @@
+# Creates a new release on a new tag
+name: Linux Release on new Tag
+
+on:
+  push:
+    branches:
+      - "release"
+    tags:
+     - '*'
+    
+jobs:
+
+  build:
+    
+    runs-on: ubuntu-latest 
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Release
+        run: cargo build --release --verbose --target-dir ./release
+      - name: Cache Release File
+        uses: actions/upload-artifact@v3
+        with:
+          name: release
+          path: release/release/${{ github.event.repository.name }}
+
+  publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: release
+          path: release/${{ github.event.repository.name }}
+      - uses: ncipollo/release-action@v1
+        with:
+          bodyFile: "body.md"
+          artifacts: "release/${{ github.event.repository.name }}"
