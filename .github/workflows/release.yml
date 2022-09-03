@@ -25,6 +25,8 @@ jobs:
           path: release/release/${{ github.event.repository.name }}
 
   publish:
+    needs: build
+
     runs-on: ubuntu-latest
 
     permissions:
