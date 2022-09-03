@@ -1,4 +1,4 @@
-# Guugle v0.1.0.1
+# Guugle v0.1.0
 
 ## Changes
 - None
