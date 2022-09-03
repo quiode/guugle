@@ -37,7 +37,7 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: release
-          path: release/${{ github.event.repository.name }}
+          path: release/
       - uses: ncipollo/release-action@v1
         with:
           bodyFile: "body.md"
