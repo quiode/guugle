@@ -5,47 +5,59 @@ use std::{
     time::Duration,
 };
 
-use crate::page_scraper::html_getter::HtmlGetterError;
-use crate::page_scraper::html_parser::get_links_from_url;
+use crate::{
+    db_manager::{create_default_tables, is_finished, unvisited_page, update_to_visited},
+    page_scraper::{
+        html_getter::{html_getter, HtmlGetterError},
+        html_parser::{get_links, Html},
+    },
+};
+use crate::{
+    db_manager::{get_new_link, DatabaseConnection},
+    page_scraper::html_parser::get_links_from_url,
+};
 
-pub fn run(start_urls: Vec<&str>) -> Vec<Visited> {
-    let mut deque_urls: VecDeque<ToVisit> = VecDeque::new();
+pub fn run(start_urls: Vec<&str>, db_path: Option<&str>) {
+    let db_path = db_path.unwrap_or("./database.db3");
 
+    let conn = create_default_tables(db_path).unwrap();
+
+    // fill in the start_urls
     for url in start_urls {
-        deque_urls.push_back(url.to_string().into());
+        unvisited_page(&conn, url);
     }
 
-    cmd_fn(deque_urls)
+    cmd_fn(conn);
 }
 
-struct ToVisit {
-    url: String,
+pub struct ToVisit {
+    pub url: String,
+    pub id: i64,
     err_count: u8,
 }
 
 impl ToVisit {
-    fn new(url: &str) -> Self {
+    pub fn new(url: &str, id: i64) -> Self {
         Self {
             url: url.to_string(),
             err_count: 0,
+            id,
         }
-    }
-}
-
-impl From<String> for ToVisit {
-    fn from(string: String) -> Self {
-        Self::new(&string)
     }
 }
 
 #[derive(Debug)]
 pub struct Visited {
     url: String,
+    id: i64,
 }
 
 impl Visited {
-    fn new(visited: ToVisit) -> Self {
-        Self { url: visited.url }
+    pub fn new(visited: ToVisit) -> Self {
+        Self {
+            url: visited.url,
+            id: visited.id,
+        }
     }
 }
 
@@ -59,6 +71,7 @@ impl From<&Visited> for Visited {
     fn from(visited: &Visited) -> Self {
         Self {
             url: visited.url.clone(),
+            id: visited.id,
         }
     }
 }
@@ -67,51 +80,39 @@ impl From<&Visited> for Visited {
 ///
 /// 1. Stores all lists
 /// 2. creates threads to parse new websites
-fn cmd_fn(start_urls: VecDeque<ToVisit>) -> Vec<Visited> {
-    // spawns list with sites to visit
-    let to_visit: Arc<Mutex<VecDeque<ToVisit>>> = Arc::new(Mutex::new(start_urls));
-
-    // spawns list with sites that have been visited
-    let visited: Arc<Mutex<Vec<Visited>>> = Arc::new(Mutex::new(vec![]));
-
+fn cmd_fn(db_connection: DatabaseConnection) {
+    let db_connection = Arc::new(Mutex::new(db_connection));
     let mut threads = vec![];
 
     for _ in 0..20 {
-        let new_to_visit = Arc::clone(&to_visit);
-
-        let new_visited = Arc::clone(&visited);
+        let new_db_connection = Arc::clone(&db_connection);
 
         threads.push(thread::spawn(move || {
-            // After 5 attempts, exit loop
-            let mut count = 0;
-
             let rt = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .unwrap();
 
             loop {
-                let new_url = new_to_visit.lock().unwrap().pop_front();
+                if is_finished(&new_db_connection.lock().unwrap()).unwrap_or(false) {
+                    break;
+                }
+
+                let new_url = get_new_link(&new_db_connection.lock().unwrap());
                 let mut to_visit: ToVisit;
 
                 match new_url {
                     Some(t_v) => to_visit = t_v,
                     None => {
-                        if count > 5 {
-                            break;
-                        }
-                        count += 1;
                         thread::sleep(Duration::from_millis(100));
                         continue;
                     }
                 }
 
-                count = 0;
+                let mut html = Html::new("");
 
-                let mut links: Vec<String> = vec![];
-
-                match rt.block_on(async { get_links_from_url(&to_visit.url).await }) {
-                    Ok(ok) => links = ok,
+                match rt.block_on(async { html_getter(&to_visit.url).await }) {
+                    Ok(ok) => html = ok,
                     Err(err) => match err {
                         HtmlGetterError::NotHTML => continue,
                         HtmlGetterError::GetError
@@ -127,13 +128,14 @@ fn cmd_fn(start_urls: VecDeque<ToVisit>) -> Vec<Visited> {
                     },
                 }
 
-                new_visited.lock().unwrap().push(to_visit.into());
+                let links = get_links(&html);
 
-                let mut to_visit = new_to_visit.lock().unwrap();
-
-                for link in links {
-                    to_visit.push_back(link.into());
-                }
+                update_to_visited(
+                    &new_db_connection.lock().unwrap(),
+                    to_visit.id,
+                    &html.text,
+                    links.iter().map(|string| string.as_str()).collect(),
+                );
             }
         }));
     }
@@ -144,14 +146,6 @@ fn cmd_fn(start_urls: VecDeque<ToVisit>) -> Vec<Visited> {
             Err(err) => eprintln!("{:#?}", err),
         }
     }
-
-    let mut result: Vec<Visited> = vec![];
-
-    for val in visited.lock().unwrap().iter() {
-        result.push(Visited::from(val))
-    }
-
-    result
 }
 
 #[cfg(test)]

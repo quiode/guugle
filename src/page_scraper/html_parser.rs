@@ -1,11 +1,11 @@
 use super::html_getter::{html_getter, HtmlGetterError};
 
 /// Parses a string containing html and returns all links
-fn get_links(html: Html) -> Vec<String> {
+pub fn get_links(html: &Html) -> Vec<String> {
     let mut start_pos;
     let mut end_pos;
 
-    let mut string = html.text;
+    let mut string = html.text.clone();
 
     let mut links = vec![];
 
@@ -44,7 +44,7 @@ fn get_links(html: Html) -> Vec<String> {
 pub async fn get_links_from_url(url: &str) -> Result<Vec<String>, HtmlGetterError> {
     let html = html_getter(url).await?;
 
-    let links = get_links(html);
+    let links = get_links(&html);
 
     Ok(links)
 }
@@ -115,7 +115,7 @@ mod tests {
         </html>
         "#;
 
-        let links = super::get_links(super::Html::new(html));
+        let links = super::get_links(&super::Html::new(html));
 
         assert!(links.contains(&"www.google.ch".to_string()));
         assert!(links.contains(&"https://team-crystal.ch".to_string()));
