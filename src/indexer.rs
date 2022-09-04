@@ -1,20 +1,16 @@
 use std::{
-    collections::VecDeque,
     sync::{Arc, Mutex},
     thread,
     time::Duration,
 };
 
+use crate::db_manager::{get_new_link, DatabaseConnection};
 use crate::{
     db_manager::{create_default_tables, is_finished, unvisited_page, update_to_visited},
     page_scraper::{
         html_getter::{html_getter, HtmlGetterError},
         html_parser::{get_links, Html},
     },
-};
-use crate::{
-    db_manager::{get_new_link, DatabaseConnection},
-    page_scraper::html_parser::get_links_from_url,
 };
 
 pub fn run(start_urls: Vec<&str>, db_path: Option<&str>) {
@@ -24,7 +20,7 @@ pub fn run(start_urls: Vec<&str>, db_path: Option<&str>) {
 
     // fill in the start_urls
     for url in start_urls {
-        unvisited_page(&conn, url);
+        unvisited_page(&conn, url).unwrap();
     }
 
     cmd_fn(conn);
@@ -135,7 +131,8 @@ fn cmd_fn(db_connection: DatabaseConnection) {
                     to_visit.id,
                     &html.text,
                     links.iter().map(|string| string.as_str()).collect(),
-                );
+                )
+                .unwrap();
             }
         }));
     }
@@ -150,6 +147,10 @@ fn cmd_fn(db_connection: DatabaseConnection) {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
+    use crate::db_manager::{create_default_tables, get_values, tests::gen_random_path};
+
     // TODO: Rewrite tests so that they work with the database
     // TODO: Add tests to test for content/corret status
     use super::run;
@@ -158,32 +159,44 @@ mod tests {
     fn run_fn_basic() {
         let start_urls = vec!["http://example.com/"];
 
-        let result = run(start_urls);
+        let path = gen_random_path();
+
+        let conn = create_default_tables(path.to_str().unwrap()).unwrap();
+
+        run(start_urls, Some(path.to_str().unwrap()));
+
+        let result = get_values(&conn).unwrap();
 
         println!("{:?}", result);
 
+        // fs::remove_file(path).unwrap();
+
+        assert_eq!(result.len(), 2);
         assert_eq!(result[0].url, "http://example.com/");
         assert_eq!(result[1].url, "https://www.iana.org/domains/example");
-        assert_eq!(result.len(), 2);
     }
 
     #[test]
     fn run_fn_complex() {
         let start_urls = vec!["http://example.com/", "https://maslinks.netlify.app/"];
 
-        let result = run(start_urls);
+        let path = gen_random_path();
 
-        let mut res = vec![];
+        let conn = create_default_tables(path.to_str().unwrap()).unwrap();
 
-        for visited in result.iter() {
-            res.push(visited.url.clone());
-        }
+        run(start_urls, Some(path.to_str().unwrap()));
+
+        let res = get_values(&conn).unwrap();
+
+        let mut res = res.iter();
 
         eprintln!("{:?}", res);
 
-        assert!(res.contains(&"http://example.com/".to_string()));
-        assert!(res.contains(&"https://maslinks.netlify.app/".to_string()));
-        assert!(res.contains(&"https://www.iana.org/domains/example".to_string()));
-        assert!(res.contains(&"https://regameapp.vercel.app/".to_string()));
+        fs::remove_file(path).unwrap();
+
+        assert!(res.any(|res| res.url == "http://example.com/".to_string()));
+        assert!(res.any(|res| res.url == "https://maslinks.netlify.app/".to_string()));
+        assert!(res.any(|res| res.url == "https://www.iana.org/domains/example".to_string()));
+        assert!(res.any(|res| res.url == "https://regameapp.vercel.app/".to_string()));
     }
 }

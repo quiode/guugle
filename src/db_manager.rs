@@ -1,6 +1,16 @@
-use rusqlite::{Connection, Result, Row, Rows};
+use rusqlite::{Connection, Result, Rows};
 
 use crate::indexer::ToVisit;
+
+#[derive(Debug)]
+pub struct Ranking {
+    pub id: i64,
+    pub visited: bool,
+    pub url: String,
+    pub content: Option<String>,
+    pub links_to: Option<String>,
+    pub in_use: bool,
+}
 
 #[readonly::make]
 pub struct DatabaseConnection {
@@ -27,7 +37,7 @@ pub fn create_default_tables(
         (),
     )?;
 
-    reset_in_use(&conn);
+    reset_in_use(&conn)?;
 
     Ok(DatabaseConnection {
         connection: conn,
@@ -114,8 +124,33 @@ pub fn get_new_link(conn: &DatabaseConnection) -> Option<ToVisit> {
     Some(ToVisit::new(&result.1, result.0))
 }
 
+// returns the values stored in the database
+pub fn get_values(conn: &DatabaseConnection) -> Result<Vec<Ranking>, rusqlite::Error> {
+    let mut statement = conn.connection.prepare("SELECT * FROM Ranking;")?;
+
+    let results = statement.query_map((), |row| {
+        Ok(Ranking {
+            id: row.get(0)?,
+            visited: row.get::<usize, i64>(1)? == 1,
+            url: row.get(2)?,
+            content: row.get(3)?,
+            links_to: row.get(4)?,
+            in_use: row.get::<usize, i64>(5)? == 1,
+        })
+    })?;
+
+    let mut output: Vec<Ranking> = vec![];
+
+    for result in results {
+        output.push(result?);
+    }
+
+    Ok(output)
+}
+
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
+    // TODO: write tests for each function
     use std::{
         fs,
         path::{Path, PathBuf},
@@ -396,7 +431,7 @@ mod tests {
         assert!(result)
     }
 
-    fn gen_random_path() -> PathBuf {
+    pub(crate) fn gen_random_path() -> PathBuf {
         let path = format!("./{}.db3", uuid::Uuid::new_v4().to_string());
 
         Path::new(&path).to_owned()
