@@ -150,6 +150,8 @@ fn cmd_fn(db_connection: DatabaseConnection) {
 
 #[cfg(test)]
 mod tests {
+    // TODO: Rewrite tests so that they work with the database
+    // TODO: Add tests to test for content/corret status
     use super::run;
 
     #[test]
