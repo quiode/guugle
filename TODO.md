@@ -3,4 +3,4 @@
 - [ ] parse keywords from html
 - [ ] create page rank
 - [x] go through all links extracted from start-pages and follow them to the next page -> repeat
-- [ ] use database to store data
+- [x] use database to store data
