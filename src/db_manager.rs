@@ -394,6 +394,9 @@ pub(crate) mod tests {
 
         let link = get_new_link(conn).unwrap();
         assert_eq!(link.url, "help.ch");
+        // had to drop here so that the database entry can be chanched before the file is deleted
+        drop(link);
+        fs::remove_file(path).unwrap();
     }
 
     #[test]
@@ -427,12 +430,14 @@ pub(crate) mod tests {
             .unwrap();
         prep.execute(("lp.ch", "help.ch:::google.ch", true, true))
             .unwrap();
+        fs::remove_file(path).unwrap();
 
         let result = is_finished(&conn).unwrap();
 
         assert!(!result)
     }
 
+    #[test]
     fn is_finished_true() {
         let path = gen_random_path();
 
@@ -464,6 +469,7 @@ pub(crate) mod tests {
         prep.execute(("lp.ch", "help.ch:::google.ch", false, true))
             .unwrap();
 
+        fs::remove_file(path).unwrap();
         let result = is_finished(&conn).unwrap();
 
         assert!(result)
@@ -486,14 +492,13 @@ pub(crate) mod tests {
 
         set_in_use(&conn, 3, true).unwrap();
 
+        fs::remove_file(path).unwrap();
         assert!(conn
             .connection
             .prepare("SELECT in_use FROM Ranking WHERE id = 3")
             .unwrap()
             .query_row((), |row| Ok(row.get::<usize, bool>(0).unwrap()))
             .unwrap());
-
-        fs::remove_file(path).unwrap();
     }
 
     pub(crate) fn gen_random_path() -> PathBuf {

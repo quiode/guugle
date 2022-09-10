@@ -94,7 +94,7 @@ impl From<&Visited> for Visited {
 /// 1. Stores all lists
 /// 2. creates threads to parse new websites
 fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>) {
-    const THREAD_COUNT: i64 = 2;
+    const THREAD_COUNT: i64 = 5;
     let mut threads = vec![];
 
     for _ in 0..THREAD_COUNT {
@@ -133,6 +133,13 @@ fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>) {
                         | HtmlGetterError::UrlError => {
                             if to_visit.err_count > 3 {
                                 // links doesn't work so just ignore it
+                                update_to_visited(
+                                    &new_db_connection.lock().unwrap(),
+                                    to_visit.id,
+                                    "",
+                                    vec![],
+                                )
+                                .ok();
                                 continue;
                             }
 
@@ -193,7 +200,7 @@ mod tests {
 
         println!("{:?}", result);
 
-        // fs::remove_file(path).unwrap();
+        fs::remove_file(path).unwrap();
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].url, "http://example.com/");
