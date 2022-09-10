@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use rusqlite::{Connection, Result, Rows};
 
 use crate::indexer::ToVisit;
@@ -12,6 +14,7 @@ pub struct Ranking {
     pub in_use: bool,
 }
 
+#[derive(Debug)]
 #[readonly::make]
 pub struct DatabaseConnection {
     #[readonly]
@@ -53,14 +56,24 @@ fn reset_in_use(conn: &Connection) -> Result<usize, rusqlite::Error> {
 
 /// creates an entry in the database for a newly discovered page
 /// returns a new ToVisit instance
-pub fn unvisited_page(conn: &DatabaseConnection, url: &str) -> Result<ToVisit, rusqlite::Error> {
-    let mut statement = conn
-        .connection
-        .prepare("INSERT INTO Ranking (url) VALUES (?);")?;
+pub fn unvisited_page(
+    conn: Arc<Mutex<DatabaseConnection>>,
+    url: &str,
+) -> Result<ToVisit, rusqlite::Error> {
+    let id: i64;
 
-    let id = statement.insert([url])?;
+    {
+        let statement = conn.lock();
+        let statement = statement.unwrap();
 
-    Ok(ToVisit::new(url, id))
+        let mut statement = statement
+            .connection
+            .prepare("INSERT INTO Ranking (url) VALUES (?);")?;
+
+        id = statement.insert([url])?;
+    }
+
+    ToVisit::new(url, id, conn)
 }
 
 // returns true if all links have been visited
@@ -111,17 +124,24 @@ fn count_rows(rows: Result<Rows<'_>>) -> Result<usize, rusqlite::Error> {
 }
 
 // returns a new link that can be searched if new links exist
-pub fn get_new_link(conn: &DatabaseConnection) -> Option<ToVisit> {
-    let mut statement = conn
-        .connection
-        .prepare("SELECT id, url FROM Ranking WHERE in_use = false AND visited = false LIMIT 1;")
-        .ok()?;
+pub fn get_new_link(conn: Arc<Mutex<DatabaseConnection>>) -> Option<ToVisit> {
+    let result: (i64, String);
 
-    let result: (i64, String) = statement
-        .query_row((), |row| Ok((row.get(0).unwrap(), row.get(1).unwrap())))
-        .ok()?;
+    {
+        let lock = conn.lock().unwrap();
+        let mut statement = lock
+            .connection
+            .prepare(
+                "SELECT id, url FROM Ranking WHERE in_use = false AND visited = false LIMIT 1;",
+            )
+            .ok()?;
 
-    Some(ToVisit::new(&result.1, result.0))
+        result = statement
+            .query_row((), |row| Ok((row.get(0).unwrap(), row.get(1).unwrap())))
+            .ok()?;
+    }
+
+    ToVisit::new(&result.1, result.0, conn).ok()
 }
 
 // returns the values stored in the database
@@ -146,6 +166,16 @@ pub fn get_values(conn: &DatabaseConnection) -> Result<Vec<Ranking>, rusqlite::E
     }
 
     Ok(output)
+}
+
+pub fn set_in_use(conn: &DatabaseConnection, id: i64, state: bool) -> Result<i64, rusqlite::Error> {
+    let mut statement = conn
+        .connection
+        .prepare("UPDATE Ranking SET in_use = ?1 WHERE id = ?2;")?;
+
+    statement.execute((state, id))?;
+
+    Ok(id)
 }
 
 #[cfg(test)]
@@ -323,37 +353,46 @@ pub(crate) mod tests {
     #[test]
     fn get_new_link_test() {
         let path = gen_random_path();
-
         let conn = create_default_tables(path.to_str().unwrap()).unwrap();
+        let conn = Arc::new(Mutex::new(conn));
+        {
+            // fill db with values
+            let prep = conn.lock().unwrap();
+            let mut statement = prep
+                .connection
+                .prepare(
+                    "INSERT INTO Ranking (url, links_to, in_use, visited) VALUES (?1, ?2, ?3, ?4)",
+                )
+                .unwrap();
 
-        // fill db with values
-        let mut prep = conn
-            .connection
-            .prepare("INSERT INTO Ranking (url, links_to, in_use, visited) VALUES (?1, ?2, ?3, ?4)")
-            .unwrap();
+            statement
+                .execute((
+                    "test.ch",
+                    "team-crystal.ch:::google.ch:::example.com",
+                    true,
+                    false,
+                ))
+                .unwrap();
+            statement
+                .execute((
+                    "help.ch",
+                    "team-crystal.ch:::google.ch:::test.ch",
+                    false,
+                    false,
+                ))
+                .unwrap();
+            statement
+                .execute(("lp.ch", "help.ch", false, true))
+                .unwrap();
+            statement
+                .execute(("ep.ch", "team-crystal.ch:::help.ch", false, false))
+                .unwrap();
+            statement
+                .execute(("p.ch", "help.ch:::google.ch", true, true))
+                .unwrap();
+        }
 
-        prep.execute((
-            "test.ch",
-            "team-crystal.ch:::google.ch:::example.com",
-            true,
-            false,
-        ))
-        .unwrap();
-        prep.execute((
-            "help.ch",
-            "team-crystal.ch:::google.ch:::test.ch",
-            false,
-            false,
-        ))
-        .unwrap();
-        prep.execute(("lp.ch", "help.ch", false, true)).unwrap();
-        prep.execute(("ep.ch", "team-crystal.ch:::help.ch", false, false))
-            .unwrap();
-        prep.execute(("p.ch", "help.ch:::google.ch", true, true))
-            .unwrap();
-
-        let link = get_new_link(&conn).unwrap();
-
+        let link = get_new_link(conn).unwrap();
         assert_eq!(link.url, "help.ch");
     }
 
@@ -430,9 +469,63 @@ pub(crate) mod tests {
         assert!(result)
     }
 
+    #[test]
+    fn set_in_use_test() {
+        let path = gen_random_path();
+
+        let conn = create_default_tables(path.to_str().unwrap()).unwrap();
+
+        gen_vals(&conn);
+
+        assert!(!conn
+            .connection
+            .prepare("SELECT in_use FROM Ranking WHERE id = 3")
+            .unwrap()
+            .query_row((), |row| Ok(row.get::<usize, bool>(0).unwrap()))
+            .unwrap());
+
+        set_in_use(&conn, 3, true).unwrap();
+
+        assert!(conn
+            .connection
+            .prepare("SELECT in_use FROM Ranking WHERE id = 3")
+            .unwrap()
+            .query_row((), |row| Ok(row.get::<usize, bool>(0).unwrap()))
+            .unwrap());
+
+        fs::remove_file(path).unwrap();
+    }
+
     pub(crate) fn gen_random_path() -> PathBuf {
         let path = format!("./{}.db3", uuid::Uuid::new_v4().to_string());
 
         Path::new(&path).to_owned()
+    }
+
+    fn gen_vals(conn: &DatabaseConnection) {
+        let mut prep = conn
+            .connection
+            .prepare("INSERT INTO Ranking (url, links_to, in_use, visited) VALUES (?1, ?2, ?3, ?4)")
+            .unwrap();
+
+        prep.execute((
+            "test.ch",
+            "team-crystal.ch:::google.ch:::example.com",
+            false,
+            true,
+        ))
+        .unwrap();
+        prep.execute((
+            "help.ch",
+            "team-crystal.ch:::google.ch:::test.ch",
+            false,
+            true,
+        ))
+        .unwrap();
+        prep.execute(("p.ch", "help.ch", false, true)).unwrap();
+        prep.execute(("ep.ch", "team-crystal.ch:::help.ch", false, true))
+            .unwrap();
+        prep.execute(("lp.ch", "help.ch:::google.ch", false, true))
+            .unwrap();
     }
 }

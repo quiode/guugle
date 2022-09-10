@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use crate::db_manager::{get_new_link, DatabaseConnection};
+use crate::db_manager::{self, get_new_link, set_in_use, DatabaseConnection};
 use crate::{
     db_manager::{create_default_tables, is_finished, unvisited_page, update_to_visited},
     page_scraper::{
@@ -17,28 +17,45 @@ pub fn run(start_urls: Vec<&str>, db_path: Option<&str>) {
     let db_path = db_path.unwrap_or("./database.db3");
 
     let conn = create_default_tables(db_path).unwrap();
+    let conn = Arc::new(Mutex::new(conn));
 
     // fill in the start_urls
     for url in start_urls {
-        unvisited_page(&conn, url).unwrap();
+        unvisited_page(Arc::clone(&conn), url).unwrap();
     }
 
-    cmd_fn(conn);
+    cmd_fn(conn)
 }
 
 pub struct ToVisit {
     pub url: String,
     pub id: i64,
     err_count: u8,
+    connection: Arc<Mutex<DatabaseConnection>>,
 }
 
 impl ToVisit {
-    pub fn new(url: &str, id: i64) -> Self {
-        Self {
+    /// Panics if Mutex error
+    pub fn new(
+        url: &str,
+        id: i64,
+        connection: Arc<Mutex<DatabaseConnection>>,
+    ) -> Result<Self, rusqlite::Error> {
+        set_in_use(&connection.lock().unwrap(), id, true)?;
+
+        Ok(Self {
             url: url.to_string(),
             err_count: 0,
             id,
-        }
+            connection,
+        })
+    }
+}
+
+impl Drop for ToVisit {
+    /// Panics if database execution didn't work
+    fn drop(&mut self) {
+        set_in_use(&self.connection.lock().unwrap(), self.id, false).unwrap();
     }
 }
 
@@ -51,7 +68,7 @@ pub struct Visited {
 impl Visited {
     pub fn new(visited: ToVisit) -> Self {
         Self {
-            url: visited.url,
+            url: visited.url.clone(),
             id: visited.id,
         }
     }
@@ -76,11 +93,11 @@ impl From<&Visited> for Visited {
 ///
 /// 1. Stores all lists
 /// 2. creates threads to parse new websites
-fn cmd_fn(db_connection: DatabaseConnection) {
-    let db_connection = Arc::new(Mutex::new(db_connection));
+fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>) {
+    const THREAD_COUNT: i64 = 2;
     let mut threads = vec![];
 
-    for _ in 0..20 {
+    for _ in 0..THREAD_COUNT {
         let new_db_connection = Arc::clone(&db_connection);
 
         threads.push(thread::spawn(move || {
@@ -94,7 +111,7 @@ fn cmd_fn(db_connection: DatabaseConnection) {
                     break;
                 }
 
-                let new_url = get_new_link(&new_db_connection.lock().unwrap());
+                let new_url = get_new_link(Arc::clone(&new_db_connection));
                 let mut to_visit: ToVisit;
 
                 match new_url {
@@ -105,10 +122,10 @@ fn cmd_fn(db_connection: DatabaseConnection) {
                     }
                 }
 
-                let mut html = Html::new("");
+                let mut html: Option<Html> = None;
 
                 match rt.block_on(async { html_getter(&to_visit.url).await }) {
-                    Ok(ok) => html = ok,
+                    Ok(ok) => html = Some(ok),
                     Err(err) => match err {
                         HtmlGetterError::NotHTML => continue,
                         HtmlGetterError::GetError
@@ -124,6 +141,8 @@ fn cmd_fn(db_connection: DatabaseConnection) {
                     },
                 }
 
+                let html = html.unwrap();
+
                 let links = get_links(&html);
 
                 update_to_visited(
@@ -133,6 +152,11 @@ fn cmd_fn(db_connection: DatabaseConnection) {
                     links.iter().map(|string| string.as_str()).collect(),
                 )
                 .unwrap();
+
+                // add newly found links to database
+                for link in links {
+                    unvisited_page(Arc::clone(&new_db_connection), &link).ok();
+                }
             }
         }));
     }
