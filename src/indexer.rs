@@ -161,9 +161,9 @@ mod tests {
 
         let path = gen_random_path();
 
-        let conn = create_default_tables(path.to_str().unwrap()).unwrap();
-
         run(start_urls, Some(path.to_str().unwrap()));
+
+        let conn = create_default_tables(path.to_str().unwrap()).unwrap();
 
         let result = get_values(&conn).unwrap();
 

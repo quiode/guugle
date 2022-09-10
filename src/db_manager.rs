@@ -29,11 +29,11 @@ pub fn create_default_tables(
     conn.execute(
         "CREATE TABLE IF NOT EXISTS Ranking (
 	id INTEGER NOT NULL PRIMARY KEY,
-    visited BOOLEAN NOT NULL DEFAULT false CHECK (visited IN (0, 1)),
+    visited BOOLEAN NOT NULL DEFAULT false CHECK (visited IN (false, true)),
   	url TEXT NOT NULL UNIQUE,
   	content TEXT,
   	links_to TEXT,
-    in_use BOOLEAN NOT NULL DEFAULT false CHECK (visited IN (0, 1)));",
+    in_use BOOLEAN NOT NULL DEFAULT false CHECK (visited IN (false, true)));",
         (),
     )?;
 
@@ -67,7 +67,7 @@ pub fn unvisited_page(conn: &DatabaseConnection, url: &str) -> Result<ToVisit, r
 pub fn is_finished(conn: &DatabaseConnection) -> Result<bool, rusqlite::Error> {
     let mut statement = conn
         .connection
-        .prepare("SELECT COUNT(*) FROM Ranking WHERE visited = true;")?;
+        .prepare("SELECT COUNT(*) FROM Ranking WHERE visited = false;")?;
 
     let result: i64 = statement.query_row((), |row| row.get(0)).unwrap();
 
@@ -199,14 +199,14 @@ pub(crate) mod tests {
             .prepare("INSERT INTO Ranking (url, links_to) VALUES (?1, ?2)")
             .unwrap();
 
-        prep.execute(["test.ch", "team-crystal.ch:::google.ch:::example.com"])
+        prep.execute(("test.ch", "team-crystal.ch:::google.ch:::example.com"))
             .unwrap();
-        prep.execute(["help.ch", "team-crystal.ch:::google.ch:::test.ch"])
+        prep.execute(("help.ch", "team-crystal.ch:::google.ch:::test.ch"))
             .unwrap();
-        prep.execute(["lp.ch", "help.ch"]).unwrap();
-        prep.execute(["ep.ch", "team-crystal.ch:::help.ch"])
+        prep.execute(("lp.ch", "help.ch")).unwrap();
+        prep.execute(("ep.ch", "team-crystal.ch:::help.ch"))
             .unwrap();
-        prep.execute(["lp.ch", "help.ch:::google.ch"]).unwrap();
+        prep.execute(("l.ch", "help.ch:::google.ch")).unwrap();
 
         let test_result1 = calculate_links_from(&conn, 2).unwrap();
 
@@ -231,14 +231,14 @@ pub(crate) mod tests {
             .prepare("INSERT INTO Ranking (url, links_to) VALUES (?1, ?2)")
             .unwrap();
 
-        prep.execute(["test.ch", "team-crystal.ch:::google.ch:::example.com"])
+        prep.execute(("test.ch", "team-crystal.ch:::google.ch:::example.com"))
             .unwrap();
-        prep.execute(["help.ch", "team-crystal.ch:::google.ch:::test.ch"])
+        prep.execute(("help.ch", "team-crystal.ch:::google.ch:::test.ch"))
             .unwrap();
-        prep.execute(["lp.ch", "help.ch"]).unwrap();
-        prep.execute(["ep.ch", "team-crystal.ch:::help.ch"])
+        prep.execute(("p.ch", "help.ch")).unwrap();
+        prep.execute(("ep.ch", "team-crystal.ch:::help.ch"))
             .unwrap();
-        prep.execute(["lp.ch", "help.ch:::google.ch"]).unwrap();
+        prep.execute(("lp.ch", "help.ch:::google.ch")).unwrap();
 
         let content = r#"
             <!doctype html>
@@ -296,14 +296,14 @@ pub(crate) mod tests {
             .prepare("INSERT INTO Ranking (url, links_to, in_use) VALUES (?1, ?2, true)")
             .unwrap();
 
-        prep.execute(["test.ch", "team-crystal.ch:::google.ch:::example.com"])
+        prep.execute(("test.ch", "team-crystal.ch:::google.ch:::example.com"))
             .unwrap();
-        prep.execute(["help.ch", "team-crystal.ch:::google.ch:::test.ch"])
+        prep.execute(("help.ch", "team-crystal.ch:::google.ch:::test.ch"))
             .unwrap();
-        prep.execute(["lp.ch", "help.ch"]).unwrap();
-        prep.execute(["ep.ch", "team-crystal.ch:::help.ch"])
+        prep.execute(("p.ch", "help.ch")).unwrap();
+        prep.execute(("ep.ch", "team-crystal.ch:::help.ch"))
             .unwrap();
-        prep.execute(["lp.ch", "help.ch:::google.ch"]).unwrap();
+        prep.execute(("lp.ch", "help.ch:::google.ch")).unwrap();
 
         // check if db are correct
         let mut statement = conn
@@ -332,27 +332,26 @@ pub(crate) mod tests {
             .prepare("INSERT INTO Ranking (url, links_to, in_use, visited) VALUES (?1, ?2, ?3, ?4)")
             .unwrap();
 
-        prep.execute([
+        prep.execute((
             "test.ch",
             "team-crystal.ch:::google.ch:::example.com",
-            "true",
-            "false",
-        ])
+            true,
+            false,
+        ))
         .unwrap();
-        prep.execute([
+        prep.execute((
             "help.ch",
             "team-crystal.ch:::google.ch:::test.ch",
-            "false",
-            "false",
-        ])
+            false,
+            false,
+        ))
         .unwrap();
-        prep.execute(["lp.ch", "help.ch", "false", "true"]).unwrap();
-        prep.execute(["ep.ch", "team-crystal.ch:::help.ch", "false, false"])
+        prep.execute(("lp.ch", "help.ch", false, true)).unwrap();
+        prep.execute(("ep.ch", "team-crystal.ch:::help.ch", false, false))
             .unwrap();
-        prep.execute(["lp.ch", "help.ch:::google.ch", "true", "true"])
+        prep.execute(("p.ch", "help.ch:::google.ch", true, true))
             .unwrap();
 
-        // check if desired value is returned
         let link = get_new_link(&conn).unwrap();
 
         assert_eq!(link.url, "help.ch");
@@ -370,24 +369,24 @@ pub(crate) mod tests {
             .prepare("INSERT INTO Ranking (url, links_to, in_use, visited) VALUES (?1, ?2, ?3, ?4)")
             .unwrap();
 
-        prep.execute([
+        prep.execute((
             "test.ch",
             "team-crystal.ch:::google.ch:::example.com",
-            "true",
-            "false",
-        ])
+            true,
+            false,
+        ))
         .unwrap();
-        prep.execute([
+        prep.execute((
             "help.ch",
             "team-crystal.ch:::google.ch:::test.ch",
-            "false",
-            "false",
-        ])
+            false,
+            false,
+        ))
         .unwrap();
-        prep.execute(["lp.ch", "help.ch", "false", "true"]).unwrap();
-        prep.execute(["ep.ch", "team-crystal.ch:::help.ch", "false, false"])
+        prep.execute(("p.ch", "help.ch", false, true)).unwrap();
+        prep.execute(("ep.ch", "team-crystal.ch:::help.ch", false, false))
             .unwrap();
-        prep.execute(["lp.ch", "help.ch:::google.ch", "true", "true"])
+        prep.execute(("lp.ch", "help.ch:::google.ch", true, true))
             .unwrap();
 
         let result = is_finished(&conn).unwrap();
@@ -406,24 +405,24 @@ pub(crate) mod tests {
             .prepare("INSERT INTO Ranking (url, links_to, in_use, visited) VALUES (?1, ?2, ?3, ?4)")
             .unwrap();
 
-        prep.execute([
+        prep.execute((
             "test.ch",
             "team-crystal.ch:::google.ch:::example.com",
-            "false",
-            "true",
-        ])
+            false,
+            true,
+        ))
         .unwrap();
-        prep.execute([
+        prep.execute((
             "help.ch",
             "team-crystal.ch:::google.ch:::test.ch",
-            "false",
-            "true",
-        ])
+            false,
+            true,
+        ))
         .unwrap();
-        prep.execute(["lp.ch", "help.ch", "false", "true"]).unwrap();
-        prep.execute(["ep.ch", "team-crystal.ch:::help.ch", "false, true"])
+        prep.execute(("p.ch", "help.ch", false, true)).unwrap();
+        prep.execute(("ep.ch", "team-crystal.ch:::help.ch", false, true))
             .unwrap();
-        prep.execute(["lp.ch", "help.ch:::google.ch", "false", "true"])
+        prep.execute(("lp.ch", "help.ch:::google.ch", false, true))
             .unwrap();
 
         let result = is_finished(&conn).unwrap();
