@@ -49,3 +49,13 @@ fn start() {
 fn search(search_word: &str, amount: u32) {
     todo!()
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn verify_cli() {
+        use super::Cli;
+        use clap::CommandFactory;
+        Cli::command().debug_assert()
+    }
+}
