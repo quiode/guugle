@@ -1,3 +1,5 @@
+use regex::Regex;
+
 use crate::db_manager::{calculate_links_from, find, DatabaseConnection, Ranking};
 
 pub struct RankedPage {
@@ -31,13 +33,9 @@ pub fn rank_pages(
                 &single_match.content.clone().unwrap_or("".to_string()),
             );
 
-        let has_whole_word = single_match.url.find(search_word).is_some()
-            || single_match
-                .content
-                .clone()
-                .unwrap_or("".to_string())
-                .find(search_word)
-                .is_some();
+        let regex = Regex::new(format!(r"\W+{search_word}\W+").as_str()).unwrap();
+        let has_whole_word = regex.is_match(&single_match.url)
+            || regex.is_match(&single_match.content.clone().unwrap_or("".to_string()));
 
         ranking.push(RankedPage {
             page: single_match,
@@ -131,6 +129,5 @@ mod tests {
         assert!(result
             .iter()
             .any(|res| res.page.url == "ep.ch" && res.rank == 3));
-
     }
 }
