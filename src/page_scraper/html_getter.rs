@@ -1,15 +1,10 @@
 use hyper::{Client, StatusCode, Uri};
 use hyper_tls::HttpsConnector;
 
-use super::html_parser::{is_html, Html};
-
-#[derive(Debug)]
-pub enum HtmlGetterError {
-    NotHTML,
-    GetError,
-    StatusCode,
-    UrlError,
-}
+use super::{
+    html::{Html, HtmlGetterError},
+    html_parser::is_html,
+};
 
 /// # Returns valid html from a link or an error if the page isn't html
 ///
@@ -70,7 +65,6 @@ pub async fn html_getter(link: &str) -> Result<Html, HtmlGetterError> {
 
 #[cfg(test)]
 mod tests {
-
     #[tokio::test]
     async fn html_getter_http() {
         let uri = "http://example.com/";

@@ -4,5 +4,6 @@
 - [x] create page rank
 - [x] go through all links extracted from start-pages and follow them to the next page -> repeat
 - [x] use database to store data
-- [ ] restructure library
+- [x] restructure library
 - [ ] create cli tool 
+- [ ] write tests for each function

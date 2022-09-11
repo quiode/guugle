@@ -1,4 +1,7 @@
-use super::html_getter::{html_getter, HtmlGetterError};
+use super::{
+    html::{Html, HtmlGetterError},
+    html_getter::html_getter,
+};
 
 /// Parses a string containing html and returns all links
 pub fn get_links(html: &Html) -> Vec<String> {
@@ -56,28 +59,6 @@ pub fn is_html(html: &str) -> bool {
     html.to_ascii_lowercase()
         .trim_start()
         .starts_with(start_string)
-}
-
-pub struct Html {
-    pub text: String,
-    _private: (),
-}
-
-/// Creates new Html instance from a string
-///
-/// # Panics
-/// Panics if the string isn't valid html
-impl Html {
-    pub fn new(text: &str) -> Self {
-        if !is_html(text) {
-            panic!("Not valid HTML!");
-        }
-
-        Html {
-            text: text.to_string(),
-            _private: (),
-        }
-    }
 }
 
 #[cfg(test)]
