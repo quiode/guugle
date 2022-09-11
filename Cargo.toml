@@ -1,15 +1,13 @@
 [package]
 name = "guugle"
-description = "web crawler"
+description = "The most performant web crawler out there"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { version = "3.2.20", optional = true }
-#config = "0.13.2"
-#serde_json = "1.0.85"
+clap = { version = "3.2.20", features = ["derive", "unicode", "wrap_help"],optional = true }
 hyper = { version = "0.14.20", features = ["full"] }
 hyper-tls = "0.5.0"
 readonly = "0.2.2"
