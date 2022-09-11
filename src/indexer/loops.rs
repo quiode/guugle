@@ -8,7 +8,7 @@ use crate::{
     db_manager::{
         creation::{create_default_tables, unvisited_page, DatabaseConnection},
         selecting::{get_new_link, is_finished},
-        updating::{set_in_use, update_to_visited},
+        updating::update_to_visited,
     },
     indexer::visit_types::ToVisit,
     page_scraper::{
