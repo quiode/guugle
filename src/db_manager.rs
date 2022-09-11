@@ -178,6 +178,47 @@ pub fn set_in_use(conn: &DatabaseConnection, id: i64, state: bool) -> Result<i64
     Ok(id)
 }
 
+/// finds all database entries witch include the search value in the url or the content
+pub fn find(
+    conn: &DatabaseConnection,
+    search_value: &str,
+) -> Result<Vec<Ranking>, rusqlite::Error> {
+    let keywords: Vec<&str> = search_value.split(" ").collect();
+    let mut url_search_statement = String::new();
+    let mut content_search_statement = String::new();
+
+    for keyword in keywords {
+        url_search_statement.push_str(&format!(" url LIKE '%{keyword}%' OR "));
+        content_search_statement.push_str(&format!(" content LIKE '%{keyword}%' OR "));
+    }
+
+    url_search_statement.push_str(" FALSE ");
+    content_search_statement.push_str(" FALSE ");
+
+    let mut statement = conn.connection.prepare(&format!(
+        "SELECT * FROM Ranking WHERE {url_search_statement} OR {content_search_statement};"
+    ))?;
+
+    let results = statement.query_map((), |row| {
+        Ok(Ranking {
+            id: row.get(0)?,
+            visited: row.get::<usize, i64>(1)? == 1,
+            url: row.get(2)?,
+            content: row.get(3)?,
+            links_to: row.get(4)?,
+            in_use: row.get::<usize, i64>(5)? == 1,
+        })
+    })?;
+
+    let mut output = vec![];
+
+    for result in results {
+        output.push(result?);
+    }
+
+    Ok(output)
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     // TODO: write tests for each function
@@ -501,6 +542,24 @@ pub(crate) mod tests {
             .unwrap());
     }
 
+    #[test]
+    fn search_function_test() {
+        let path = gen_random_path();
+        let conn = create_default_tables(path.to_str().unwrap()).unwrap();
+
+        gen_vals(&conn);
+
+        let test_results = find(&conn, "crystal").unwrap();
+
+        assert_eq!(test_results.len(), 3);
+
+        assert_eq!(test_results[0].id, 1);
+        assert_eq!(test_results[1].id, 2);
+        assert_eq!(test_results[2].id, 4);
+
+        fs::remove_file(path);
+    }
+
     pub(crate) fn gen_random_path() -> PathBuf {
         let path = format!("./{}.db3", uuid::Uuid::new_v4().to_string());
 
@@ -510,7 +569,7 @@ pub(crate) mod tests {
     fn gen_vals(conn: &DatabaseConnection) {
         let mut prep = conn
             .connection
-            .prepare("INSERT INTO Ranking (url, links_to, in_use, visited) VALUES (?1, ?2, ?3, ?4)")
+            .prepare("INSERT INTO Ranking (url, links_to, in_use, visited, content) VALUES (?1, ?2, ?3, ?4, ?5);") 
             .unwrap();
 
         prep.execute((
@@ -518,6 +577,7 @@ pub(crate) mod tests {
             "team-crystal.ch:::google.ch:::example.com",
             false,
             true,
+            "team-crystal.ch:::google.ch:::example.com",
         ))
         .unwrap();
         prep.execute((
@@ -525,12 +585,26 @@ pub(crate) mod tests {
             "team-crystal.ch:::google.ch:::test.ch",
             false,
             true,
+            "team-crystal.ch:::google.ch:::test.ch",
         ))
         .unwrap();
-        prep.execute(("p.ch", "help.ch", false, true)).unwrap();
-        prep.execute(("ep.ch", "team-crystal.ch:::help.ch", false, true))
+        prep.execute(("p.ch", "help.ch", false, true, "help.ch"))
             .unwrap();
-        prep.execute(("lp.ch", "help.ch:::google.ch", false, true))
-            .unwrap();
+        prep.execute((
+            "ep.ch",
+            "team-crystal.ch:::help.ch",
+            false,
+            true,
+            "team-crystal.ch::help.ch",
+        ))
+        .unwrap();
+        prep.execute((
+            "lp.ch",
+            "help.ch:::google.ch",
+            false,
+            true,
+            "help.ch:::google.ch",
+        ))
+        .unwrap();
     }
 }
