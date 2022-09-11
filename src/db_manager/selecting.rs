@@ -304,4 +304,11 @@ pub mod tests {
 
         fs::remove_file(path).unwrap();
     }
+
+    #[test]
+    fn get_values_test() {
+        todo!()
+
+        // Test if get_values gets all values
+    }
 }

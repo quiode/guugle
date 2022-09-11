@@ -123,14 +123,11 @@ fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>) {
 mod tests {
     use std::fs;
 
+    use super::run;
     use crate::db_manager::{creation::create_default_tables, helper::*, selecting::get_values};
 
-    // TODO: Rewrite tests so that they work with the database
-    // TODO: Add tests to test for content/corret status
-    use super::run;
-
     #[test]
-    fn run_fn_basic() {
+    fn run_fn_basic_urls() {
         let start_urls = vec!["http://example.com/"];
 
         let path = gen_random_path();
@@ -151,7 +148,13 @@ mod tests {
     }
 
     #[test]
-    fn run_fn_complex() {
+    fn run_fn_basic_content() {
+        todo!()
+        // check if content is correct
+    }
+
+    #[test]
+    fn run_fn_complex_urls() {
         let start_urls = vec!["http://example.com/", "https://maslinks.netlify.app/"];
 
         let path = gen_random_path();
@@ -172,5 +175,11 @@ mod tests {
         assert!(res.any(|res| res.url == "https://maslinks.netlify.app/".to_string()));
         assert!(res.any(|res| res.url == "https://www.iana.org/domains/example".to_string()));
         assert!(res.any(|res| res.url == "https://regameapp.vercel.app/".to_string()));
+    }
+
+    #[test]
+    fn run_fn_complex_content() {
+        todo!()
+        // check if content is correct
     }
 }

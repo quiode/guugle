@@ -76,4 +76,28 @@ pub fn gen_vals(conn: &DatabaseConnection) {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    #[test]
+    fn correct_count() {
+        todo!()
+        // Test if count_rows outputs correct value
+    }
+
+    #[test]
+    fn is_random() {
+        todo!()
+        // test if gen_random_path outputs a random path (generate 10000 paths and everyone has to be unique)
+    }
+
+    #[test]
+    fn is_path() {
+        todo!()
+        // test if gen_random_path generates a correct path
+    }
+
+    #[test]
+    fn vals_generated() {
+        todo!()
+        // test if gen_vals generates the correct values
+    }
+}

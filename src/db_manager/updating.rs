@@ -40,7 +40,7 @@ pub mod tests {
     use crate::db_manager::{
         creation::create_default_tables,
         helper::{count_rows, gen_random_path, gen_vals},
-        updating::{set_in_use, update_to_visited},
+        updating::{reset_in_use, set_in_use, update_to_visited},
     };
 
     #[test]
@@ -129,6 +129,8 @@ pub mod tests {
             .unwrap();
         prep.execute(("lp.ch", "help.ch:::google.ch")).unwrap();
 
+        reset_in_use(&conn.connection).unwrap();
+
         // check if db are correct
         let mut statement = conn
             .connection
@@ -141,7 +143,7 @@ pub mod tests {
 
         fs::remove_file(path).unwrap();
 
-        assert_eq!(count, 5);
+        assert_eq!(count, 0);
     }
 
     #[test]

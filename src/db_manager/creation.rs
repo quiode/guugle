@@ -96,4 +96,10 @@ pub mod tests {
 
         result.unwrap();
     }
+
+    #[test]
+    fn unvisited_created() {
+        todo!()
+        // Test unvisited_page
+    }
 }
