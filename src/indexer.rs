@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use crate::db_manager::{self, get_new_link, set_in_use, DatabaseConnection};
+use crate::db_manager::{get_new_link, set_in_use, DatabaseConnection};
 use crate::{
     db_manager::{create_default_tables, is_finished, unvisited_page, update_to_visited},
     page_scraper::{

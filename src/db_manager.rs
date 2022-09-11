@@ -31,11 +31,11 @@ pub fn create_default_tables(
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS Ranking (
-	id INTEGER NOT NULL PRIMARY KEY,
+    id INTEGER NOT NULL PRIMARY KEY,
     visited BOOLEAN NOT NULL DEFAULT false CHECK (visited IN (false, true)),
-  	url TEXT NOT NULL UNIQUE,
-  	content TEXT,
-  	links_to TEXT,
+      url TEXT NOT NULL UNIQUE,
+      content TEXT,
+      links_to TEXT,
     in_use BOOLEAN NOT NULL DEFAULT false CHECK (visited IN (false, true)));",
         (),
     )?;
@@ -103,7 +103,7 @@ pub fn update_to_visited(
 }
 
 /// calculates how many pages point to this page
-fn calculate_links_from(conn: &DatabaseConnection, id: i64) -> Result<usize, rusqlite::Error> {
+pub fn calculate_links_from(conn: &DatabaseConnection, id: i64) -> Result<usize, rusqlite::Error> {
     let url: String = conn
         .connection
         .prepare("SELECT url FROM Ranking WHERE id = ?1;")?
@@ -557,7 +557,7 @@ pub(crate) mod tests {
         assert_eq!(test_results[1].id, 2);
         assert_eq!(test_results[2].id, 4);
 
-        fs::remove_file(path);
+        fs::remove_file(path).unwrap();
     }
 
     pub(crate) fn gen_random_path() -> PathBuf {
@@ -566,7 +566,7 @@ pub(crate) mod tests {
         Path::new(&path).to_owned()
     }
 
-    fn gen_vals(conn: &DatabaseConnection) {
+    pub(crate) fn gen_vals(conn: &DatabaseConnection) {
         let mut prep = conn
             .connection
             .prepare("INSERT INTO Ranking (url, links_to, in_use, visited, content) VALUES (?1, ?2, ?3, ?4, ?5);") 
