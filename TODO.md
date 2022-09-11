@@ -7,3 +7,4 @@
 - [x] restructure library
 - [ ] create cli tool 
 - [ ] write tests for each function
+- [ ] document crate better
