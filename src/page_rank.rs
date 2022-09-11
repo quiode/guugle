@@ -127,10 +127,10 @@ mod tests {
 
         assert_eq!(result.len(), 3);
 
+        fs::remove_file(path).unwrap();
         assert!(result
             .iter()
             .any(|res| res.page.url == "ep.ch" && res.rank == 3));
 
-        fs::remove_file(path).unwrap();
     }
 }
