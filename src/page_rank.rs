@@ -33,7 +33,7 @@ pub fn rank_pages(
                 &single_match.content.clone().unwrap_or("".to_string()),
             );
 
-        let regex = Regex::new(format!(r"\W+{search_word}\W+").as_str()).unwrap();
+        let regex = Regex::new(format!(r"(?i)\W+{search_word}\W+").as_str()).unwrap();
         let has_whole_word = regex.is_match(&single_match.url)
             || regex.is_match(&single_match.content.clone().unwrap_or("".to_string()));
 
@@ -129,5 +129,21 @@ mod tests {
         assert!(result
             .iter()
             .any(|res| res.page.url == "ep.ch" && res.rank == 3));
+    }
+
+    #[test]
+    fn rank_phrase() {
+        let path = gen_random_path();
+        let conn = create_default_tables(path.to_str().unwrap()).unwrap();
+
+        gen_vals(&conn);
+
+        let result = rank_pages(&conn, "anim tempor fugiat deserunt est").unwrap();
+
+        fs::remove_file(path).unwrap();
+
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0].page.url, "hre.he");
+        assert_eq!(result[0].rank, 40);
     }
 }

@@ -606,5 +606,21 @@ pub(crate) mod tests {
             "help.ch:::google.ch",
         ))
         .unwrap();
+
+        prep.execute((
+            "hre.he",
+            "test.ch:::lp.ch",
+            false,
+            true,
+            "<html><body><h1>
+            Laborum nulla quis deserunt labore quis cupidatat reprehenderit amet consequat reprehenderit tempor anim sint amet. Eiusmod fugiat eu aliqua qui do proident adipisicing. Dolore esse laborum voluptate in qui in ex. Sunt exercitation sit dolore cillum. Nostrud non aliqua sit anim aliqua labore Lorem quis nostrud. Exercitation ex nulla in laborum eu non voluptate consectetur.
+            Incididunt anim voluptate aliqua et commodo cillum. Adipisicing fugiat ea consectetur cupidatat quis velit duis. Ad fugiat id quis proident qui mollit eu fugiat exercitation. Consectetur velit tempor esse reprehenderit laboris ea labore consectetur ut irure cupidatat in mollit. Dolore consequat amet id ipsum deserunt in eiusmod. Sunt excepteur eu eiusmod voluptate est mollit elit sunt laboris nostrud. Culpa non ea ad ex veniam et aute.
+
+            Tempor enim non laborum enim ut duis laborum. Dolore nisi dolor Lorem anim occaecat non eu tempor incididunt. Consectetur aliquip reprehenderit fugiat magna. Est voluptate nisi id voluptate est cupidatat incididunt. Aute est qui mollit quis commodo irure ut eu ipsum sit ex cupidatat est adipisicing. Amet qui do cillum duis ad. Voluptate anim ipsum mollit sint incididunt.
+
+            Eu nisi eu quis anim tempor fugiat deserunt est deserunt nulla ad do. Ipsum pariatur enim eiusmod minim cupidatat esse excepteur nostrud proident officia Lorem laboris esse. Excepteur reprehenderit anim duis exercitation labore nisi aliquip duis do. Id eiusmod dolore ex nulla nulla.
+            </h1></body></html>",
+        ))
+        .unwrap();
     }
 }
