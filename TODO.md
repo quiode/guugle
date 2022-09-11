@@ -1,6 +1,8 @@
 - [x] get html
 - [x] get links from html
-- [ ] parse keywords from html
-- [ ] create page rank
+- [x] parse keywords from html
+- [x] create page rank
 - [x] go through all links extracted from start-pages and follow them to the next page -> repeat
 - [x] use database to store data
+- [ ] restructure library
+- [x] create cli tool 
