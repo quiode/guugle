@@ -4,8 +4,6 @@ use rusqlite::{Result, Rows};
 
 use super::creation::DatabaseConnection;
 
-use itertools::Itertools;
-
 // counts how many rows the sql select statement outputed
 pub fn count_rows(rows: Result<Rows<'_>>) -> Result<usize, rusqlite::Error> {
     let values: Vec<_> = rows?.mapped(|_| Ok(())).collect();
@@ -79,6 +77,8 @@ pub fn gen_vals(conn: &DatabaseConnection) {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use itertools::Itertools;
 
     use crate::db_manager::{
@@ -106,6 +106,7 @@ mod tests {
 
         let rows = statement.query(());
 
+        fs::remove_file(path).unwrap();
         assert_eq!(count_rows(rows).unwrap(), 3);
     }
 
@@ -202,6 +203,7 @@ mod tests {
         let diff = diff.collect::<Vec<_>>();
         println!("{:?}", diff);
 
+        fs::remove_file(path);
         assert!(test_vals.eq(iter_correct_vals));
     }
 }

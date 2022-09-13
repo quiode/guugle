@@ -64,11 +64,19 @@ pub fn unvisited_page(
 
 #[cfg(test)]
 pub mod tests {
-    use std::fs;
+    use std::{
+        fs,
+        sync::{Arc, Mutex},
+    };
 
     use rusqlite::Connection;
 
-    use crate::db_manager::{creation::create_default_tables, helper::gen_random_path};
+    use crate::db_manager::{
+        creation::create_default_tables,
+        helper::{gen_random_path, gen_vals},
+    };
+
+    use super::unvisited_page;
 
     #[test]
     fn file_created() {
@@ -97,9 +105,31 @@ pub mod tests {
         result.unwrap();
     }
 
+    /// tests unvisited_page
     #[test]
     fn unvisited_created() {
-        todo!()
-        // Test unvisited_page
+        const WORD: &str = "kampfwort90.ch";
+        // prepare database
+        let path = gen_random_path();
+        let conn = create_default_tables(path.to_str().unwrap()).unwrap();
+        gen_vals(&conn);
+
+        let conn = Arc::new(Mutex::new(conn));
+
+        // call function that is tested
+        let to_visit = unvisited_page(Arc::clone(&conn), WORD).unwrap();
+        let conn = conn.lock().unwrap();
+        let mut statement = conn
+            .connection
+            .prepare("SELECT url FROM Ranking WHERE id = ?1;")
+            .unwrap();
+        let result = statement
+            .query_row([to_visit.id], |r| r.get::<usize, String>(0))
+            .unwrap();
+
+        fs::remove_file(path).unwrap();
+
+        assert_eq!(to_visit.url, WORD);
+        assert_eq!(result, WORD)
     }
 }
