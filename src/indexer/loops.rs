@@ -120,14 +120,17 @@ fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>) {
     for thread in threads {
         match thread.join() {
             Ok(_) => {}
-            Err(err) => eprintln!("{:#?}", err),
+            Err(err) => println!("{:#?}", err),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::{collections::hash_map::DefaultHasher, fs, hash::Hash};
+
+    use hex::{encode, ToHex};
+    use sha2::{Digest, Sha256};
 
     use super::run;
     use crate::db_manager::{creation::create_default_tables, helper::*, selecting::get_values};
@@ -240,7 +243,7 @@ mod tests {
 
         let mut res = res.iter();
 
-        eprintln!("{:?}", res);
+        println!("{:?}", res);
 
         fs::remove_file(path).unwrap();
 
@@ -250,9 +253,52 @@ mod tests {
         assert!(res.any(|res| res.url == "https://regameapp.vercel.app/".to_string()));
     }
 
+    /// checks if content is correct
     #[test]
     fn run_fn_complex_content() {
-        todo!()
-        // check if content is correct
+        let hasher = Sha256::new();
+
+        let start_urls = vec!["http://example.com/", "https://maslinks.netlify.app/"];
+
+        let path = gen_random_path();
+
+        let conn = create_default_tables(path.to_str().unwrap()).unwrap();
+
+        run(start_urls, Some(path.to_str().unwrap()));
+
+        let res = get_values(&conn).unwrap();
+
+        let mut res = res.iter();
+
+        let correct_content = [
+            hex_literal::hex!("4b898a14a78bc5bc179d223fd3dd7c6cee16bc8d9aa96ff46ae2fac05abe39e6"),
+            hex_literal::hex!("14716616aad98b1dbc41d02830d5f77ba0c988365ae1991e9eedb6051d38f121"),
+        ];
+
+        println!("{:#?}", res);
+
+        assert!(res.any(|res| {
+            if res.url != "https://creatumeme.netlify.app/" {
+                return false;
+            }
+            let mut hasher = hasher.clone();
+            hasher.update(res.content.as_ref().unwrap());
+            let result = &hasher.finalize()[..];
+            println!("{:?} : {:?}", encode(result), encode(correct_content[0]));
+            result == correct_content[0]
+        }));
+
+        assert!(res.any(|res| {
+            if res.url != "https://dejalo-ir.herokuapp.com/" {
+                return false;
+            }
+            let mut hasher = hasher.clone();
+            hasher.update(res.content.as_ref().unwrap());
+            let result = &hasher.finalize()[..];
+            println!("{:?} : {:?}", encode(result), encode(correct_content[1]));
+            result == correct_content[1]
+        }));
+
+        fs::remove_file(path).unwrap();
     }
 }

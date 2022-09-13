@@ -8,12 +8,15 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "3.2.20", features = ["derive", "wrap_help"], optional = true }
+hex = "0.4.3"
+hex-literal = "0.3.4"
 hyper = { version = "0.14.20", features = ["full"] }
 hyper-tls = "0.5.0"
 itertools = "0.10.3"
 readonly = "0.2.2"
 regex = "1.6.0"
 rusqlite = { version = "0.28.0", features = ["bundled", "serde_json"] }
+sha2 = "0.10.5"
 tokio = { version = "1.20.1", features = ["full"] }
 uuid = { version = "1.1.2", features = ["v4"] }
 

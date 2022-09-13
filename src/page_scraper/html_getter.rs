@@ -44,7 +44,7 @@ pub async fn html_getter(link: &str) -> Result<Html, HtmlGetterError> {
                 .unwrap()
                 .contains("html")
         {
-            eprintln!("{:?}", response.headers());
+            println!("{:?}", response.headers());
             return Err(HtmlGetterError::NotHTML);
         }
 
@@ -53,7 +53,7 @@ pub async fn html_getter(link: &str) -> Result<Html, HtmlGetterError> {
         let text = String::from_utf8(bytes.to_vec()).unwrap();
 
         if !is_html(&text) {
-            eprintln!("{text}");
+            println!("{text}");
             return Err(HtmlGetterError::NotHTML);
         }
 
