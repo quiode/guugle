@@ -270,6 +270,7 @@ mod tests {
 
         let mut res = res.iter();
 
+        // TODO: page is dynamic, only check if a certain text is included in the page
         let correct_content = [
             hex_literal::hex!("4b898a14a78bc5bc179d223fd3dd7c6cee16bc8d9aa96ff46ae2fac05abe39e6"),
             hex_literal::hex!("14716616aad98b1dbc41d02830d5f77ba0c988365ae1991e9eedb6051d38f121"),
