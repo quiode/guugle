@@ -127,9 +127,9 @@ pub mod tests {
             .query_row([to_visit.id], |r| r.get::<usize, String>(0))
             .unwrap();
 
-        fs::remove_file(path).unwrap();
-
         assert_eq!(to_visit.url, WORD);
-        assert_eq!(result, WORD)
+        drop(to_visit);
+        assert_eq!(result, WORD);
+        fs::remove_file(path).unwrap();
     }
 }

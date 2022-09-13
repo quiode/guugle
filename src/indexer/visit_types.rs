@@ -5,7 +5,6 @@ use crate::db_manager::{creation::DatabaseConnection, updating::set_in_use};
 pub struct ToVisit {
     pub url: String,
     pub id: i64,
-    pub err_count: u8,
     pub connection: Arc<Mutex<DatabaseConnection>>,
 }
 
@@ -20,7 +19,6 @@ impl ToVisit {
 
         Ok(Self {
             url: url.to_string(),
-            err_count: 0,
             id,
             connection,
         })

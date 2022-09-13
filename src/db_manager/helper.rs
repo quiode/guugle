@@ -203,7 +203,7 @@ mod tests {
         let diff = diff.collect::<Vec<_>>();
         println!("{:?}", diff);
 
-        fs::remove_file(path);
+        fs::remove_file(path).unwrap();
         assert!(test_vals.eq(iter_correct_vals));
     }
 }

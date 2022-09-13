@@ -55,7 +55,7 @@ fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>) {
                 }
 
                 let new_url = get_new_link(Arc::clone(&new_db_connection));
-                let mut to_visit: ToVisit;
+                let to_visit: ToVisit;
 
                 match new_url {
                     Some(t_v) => to_visit = t_v,
@@ -70,23 +70,29 @@ fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>) {
                 match rt.block_on(async { html_getter(&to_visit.url).await }) {
                     Ok(ok) => html = Some(ok),
                     Err(err) => match err {
-                        HtmlGetterError::NotHTML => continue,
+                        HtmlGetterError::NotHTML => {
+                            update_to_visited(
+                                &new_db_connection.lock().unwrap(),
+                                to_visit.id,
+                                "NOT HTML",
+                                vec![],
+                            )
+                            .ok();
+                            continue;
+                        }
                         HtmlGetterError::GetError
                         | HtmlGetterError::StatusCode
                         | HtmlGetterError::UrlError => {
-                            if to_visit.err_count > 3 {
-                                // links doesn't work so just ignore it
-                                update_to_visited(
-                                    &new_db_connection.lock().unwrap(),
-                                    to_visit.id,
-                                    "",
-                                    vec![],
-                                )
-                                .ok();
-                                continue;
-                            }
+                            // links doesn't work so just ignore it
+                            update_to_visited(
+                                &new_db_connection.lock().unwrap(),
+                                to_visit.id,
+                                "ERROR",
+                                vec![],
+                            )
+                            .ok();
 
-                            to_visit.err_count += 1;
+                            continue;
                         }
                     },
                 }
@@ -147,10 +153,77 @@ mod tests {
         assert_eq!(result[1].url, "https://www.iana.org/domains/example");
     }
 
+    /// checks if content is correct
     #[test]
     fn run_fn_basic_content() {
-        todo!()
-        // check if content is correct
+        let start_urls = vec!["http://example.com/"];
+
+        let path = gen_random_path();
+
+        run(start_urls, Some(path.to_str().unwrap()));
+
+        let conn = create_default_tables(path.to_str().unwrap()).unwrap();
+
+        let result = get_values(&conn).unwrap();
+
+        println!("{:?}", result);
+
+        let content = [
+            r#"
+        <!doctype html>
+<html>
+<head>
+    <title>Example Domain</title>
+
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type="text/css">
+    body {
+        background-color: #f0f0f2;
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        
+    }
+    div {
+        width: 600px;
+        margin: 5em auto;
+        padding: 2em;
+        background-color: #fdfdff;
+        border-radius: 0.5em;
+        box-shadow: 2px 3px 7px 2px rgba(0,0,0,0.02);
+    }
+    a:link, a:visited {
+        color: #38488f;
+        text-decoration: none;
+    }
+    @media (max-width: 700px) {
+        div {
+            margin: 0 auto;
+            width: auto;
+        }
+    }
+    </style>    
+</head>
+
+<body>
+<div>
+    <h1>Example Domain</h1>
+    <p>This domain is for use in illustrative examples in documents. You may use this
+    domain in literature without prior coordination or asking for permission.</p>
+    <p><a href="https://www.iana.org/domains/example">More information...</a></p>
+</div>
+</body>
+</html>
+        "#.trim(),
+            "ERROR",
+        ];
+
+        fs::remove_file(path).unwrap();
+
+        assert_eq!(result[0].content.as_ref().unwrap().trim(), content[0]);
+        assert_eq!(result[1].content.as_ref().unwrap().trim(), content[1]);
     }
 
     #[test]

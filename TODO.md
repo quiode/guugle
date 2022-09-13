@@ -6,5 +6,8 @@
 - [x] use database to store data
 - [x] restructure library
 - [ ] create cli tool 
+- - [ ] option to configure the search
+- - - amount of threads
+- - - default location
 - [ ] write tests for each function
 - [ ] document crate better

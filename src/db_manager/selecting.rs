@@ -125,7 +125,8 @@ pub mod tests {
     use crate::db_manager::{
         creation::create_default_tables,
         helper::{gen_random_path, gen_vals},
-        selecting::{calculate_links_from, find, get_new_link},
+        ranking::Ranking,
+        selecting::{calculate_links_from, find, get_new_link, get_values},
     };
 
     use super::is_finished;
@@ -305,10 +306,86 @@ pub mod tests {
         fs::remove_file(path).unwrap();
     }
 
+    /// tests if get_values gets all values
     #[test]
     fn get_values_test() {
-        todo!()
+        // preparation
+        let path = gen_random_path();
+        let conn = create_default_tables(path.to_str().unwrap()).unwrap();
 
-        // Test if get_values gets all values
+        // fill db with values
+        gen_vals(&conn);
+
+        // test values
+        let vals = get_values(&conn).unwrap();
+
+        let test_vals = vals.iter();
+
+        let correct_vals = vec![
+            Ranking {
+                id: 1,
+                content: Some("team-crystal.ch:::google.ch:::example.com".to_string()),
+                in_use: false,
+                visited: true,
+                links_to: Some("team-crystal.ch:::google.ch:::example.com".to_string()),
+                url: "test.ch".to_string(),
+            },
+            Ranking {
+                id: 2,
+                url: "help.ch".to_string(),
+                content: Some("team-crystal.ch:::google.ch:::test.ch".to_string()),
+                links_to: Some("team-crystal.ch:::google.ch:::test.ch".to_string()),
+                in_use: false,
+                visited: true,
+            },
+            Ranking {
+                id: 3,
+                url: "p.ch".to_string(),
+                content: Some("help.ch".to_string()),
+                links_to: Some("help.ch".to_string()),
+                in_use: false,
+                visited: true,
+            },
+            Ranking {
+                id: 4,
+                url: "ep.ch".to_string(),
+                content: Some("team-crystal.ch::help.ch".to_string()),
+                links_to: Some("team-crystal.ch:::help.ch".to_string()),
+                in_use: false,
+                visited: true,
+            },
+            Ranking {
+                id: 5,
+                url: "lp.ch".to_string(),
+                content: Some("help.ch:::google.ch".to_string()),
+                links_to: Some("help.ch:::google.ch".to_string()),
+                in_use: false,
+                visited: true,
+            },
+            Ranking {
+                id: 6,
+                url: "hre.he".to_string(),
+                content: Some("<html><body><h1>
+            Laborum nulla quis deserunt labore quis cupidatat reprehenderit amet consequat reprehenderit tempor anim sint amet. Eiusmod fugiat eu aliqua qui do proident adipisicing. Dolore esse laborum voluptate in qui in ex. Sunt exercitation sit dolore cillum. Nostrud non aliqua sit anim aliqua labore Lorem quis nostrud. Exercitation ex nulla in laborum eu non voluptate consectetur.
+            Incididunt anim voluptate aliqua et commodo cillum. Adipisicing fugiat ea consectetur cupidatat quis velit duis. Ad fugiat id quis proident qui mollit eu fugiat exercitation. Consectetur velit tempor esse reprehenderit laboris ea labore consectetur ut irure cupidatat in mollit. Dolore consequat amet id ipsum deserunt in eiusmod. Sunt excepteur eu eiusmod voluptate est mollit elit sunt laboris nostrud. Culpa non ea ad ex veniam et aute.
+
+            Tempor enim non laborum enim ut duis laborum. Dolore nisi dolor Lorem anim occaecat non eu tempor incididunt. Consectetur aliquip reprehenderit fugiat magna. Est voluptate nisi id voluptate est cupidatat incididunt. Aute est qui mollit quis commodo irure ut eu ipsum sit ex cupidatat est adipisicing. Amet qui do cillum duis ad. Voluptate anim ipsum mollit sint incididunt.
+
+            Eu nisi eu quis anim tempor fugiat deserunt est deserunt nulla ad do. Ipsum pariatur enim eiusmod minim cupidatat esse excepteur nostrud proident officia Lorem laboris esse. Excepteur reprehenderit anim duis exercitation labore nisi aliquip duis do. Id eiusmod dolore ex nulla nulla.
+            </h1></body></html>".to_string()),
+                links_to: Some("test.ch:::lp.ch".to_string()),
+                in_use: false,
+                visited: true,
+            },
+        ];
+
+        let iter_correct_vals = correct_vals.iter();
+
+        let diff = vals.iter().filter(|r| !correct_vals.contains(r));
+        let diff = diff.collect::<Vec<_>>();
+        println!("{:?}", diff);
+
+        fs::remove_file(path).unwrap();
+        assert!(test_vals.eq(iter_correct_vals));
     }
 }
