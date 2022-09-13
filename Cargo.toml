@@ -10,6 +10,7 @@ edition = "2021"
 clap = { version = "3.2.20", features = ["derive", "wrap_help"], optional = true }
 hyper = { version = "0.14.20", features = ["full"] }
 hyper-tls = "0.5.0"
+itertools = "0.10.3"
 readonly = "0.2.2"
 regex = "1.6.0"
 rusqlite = { version = "0.28.0", features = ["bundled", "serde_json"] }
