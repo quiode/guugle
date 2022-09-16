@@ -270,11 +270,7 @@ mod tests {
 
         let mut res = res.iter();
 
-        // TODO: page is dynamic, only check if a certain text is included in the page
-        let correct_content = [
-            hex_literal::hex!("4b898a14a78bc5bc179d223fd3dd7c6cee16bc8d9aa96ff46ae2fac05abe39e6"),
-            hex_literal::hex!("14716616aad98b1dbc41d02830d5f77ba0c988365ae1991e9eedb6051d38f121"),
-        ];
+        let correct_content = ["Página web gratuita para crear Memes", "<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css?family=Mukta:300,400,700\">"];
 
         println!("{:#?}", res);
 
@@ -282,22 +278,22 @@ mod tests {
             if res.url != "https://creatumeme.netlify.app/" {
                 return false;
             }
-            let mut hasher = hasher.clone();
-            hasher.update(res.content.as_ref().unwrap());
-            let result = &hasher.finalize()[..];
-            println!("{:?} : {:?}", encode(result), encode(correct_content[0]));
-            result == correct_content[0]
+
+            match &res.content {
+                None => return false,
+                Some(c) => return c.contains(correct_content[0]),
+            }
         }));
 
         assert!(res.any(|res| {
             if res.url != "https://dejalo-ir.herokuapp.com/" {
                 return false;
             }
-            let mut hasher = hasher.clone();
-            hasher.update(res.content.as_ref().unwrap());
-            let result = &hasher.finalize()[..];
-            println!("{:?} : {:?}", encode(result), encode(correct_content[1]));
-            result == correct_content[1]
+
+            match &res.content {
+                None => return false,
+                Some(c) => return c.contains(correct_content[1]),
+            }
         }));
 
         fs::remove_file(path).unwrap();
