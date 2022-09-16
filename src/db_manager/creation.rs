@@ -45,6 +45,7 @@ pub fn create_default_tables(
 pub fn unvisited_page(
     conn: Arc<Mutex<DatabaseConnection>>,
     url: &str,
+    verbose: bool,
 ) -> Result<ToVisit, rusqlite::Error> {
     let id: i64;
 
@@ -57,6 +58,10 @@ pub fn unvisited_page(
             .prepare("INSERT INTO Ranking (url) VALUES (?);")?;
 
         id = statement.insert([url])?;
+    }
+
+    if verbose {
+        println!("Found new page with url: {}", url);
     }
 
     ToVisit::new(url, id, conn)
@@ -118,7 +123,7 @@ pub mod tests {
             let conn = Arc::new(Mutex::new(conn));
 
             // call function that is tested
-            let to_visit = unvisited_page(Arc::clone(&conn), WORD).unwrap();
+            let to_visit = unvisited_page(Arc::clone(&conn), WORD, false).unwrap();
             let conn = conn.lock().unwrap();
             let mut statement = conn
                 .connection

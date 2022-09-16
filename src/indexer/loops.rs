@@ -18,25 +18,25 @@ use crate::{
     },
 };
 
-pub fn run(start_urls: Vec<&str>, db_path: Option<&str>) {
-    let db_path = db_path.unwrap_or("./database.db3");
+pub fn run(start_urls: Vec<&str>, db_path: Option<String>, verbose: bool) {
+    let db_path = db_path.unwrap_or("./database.db3".to_owned());
 
-    let conn = create_default_tables(db_path).unwrap();
+    let conn = create_default_tables(&db_path).unwrap();
     let conn = Arc::new(Mutex::new(conn));
 
     // fill in the start_urls
     for url in start_urls {
-        unvisited_page(Arc::clone(&conn), url).unwrap();
+        unvisited_page(Arc::clone(&conn), url, verbose).unwrap();
     }
 
-    cmd_fn(conn)
+    cmd_fn(conn, verbose)
 }
 
 /// # Command function
 ///
 /// 1. Stores all lists
 /// 2. creates threads to parse new websites
-fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>) {
+fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>, verbose: bool) {
     const THREAD_COUNT: i64 = 5;
     let mut threads = vec![];
 
@@ -51,6 +51,9 @@ fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>) {
 
             loop {
                 if is_finished(&new_db_connection.lock().unwrap()).unwrap_or(false) {
+                    if verbose {
+                        println!("No new pages to crawl found, shutting down thread...");
+                    }
                     break;
                 }
 
@@ -76,6 +79,7 @@ fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>) {
                                 to_visit.id,
                                 "NOT HTML",
                                 vec![],
+                                verbose,
                             )
                             .ok();
                             continue;
@@ -89,6 +93,7 @@ fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>) {
                                 to_visit.id,
                                 "ERROR",
                                 vec![],
+                                verbose,
                             )
                             .ok();
 
@@ -106,12 +111,13 @@ fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>) {
                     to_visit.id,
                     &html.text,
                     links.iter().map(|string| string.as_str()).collect(),
+                    verbose,
                 )
                 .unwrap();
 
                 // add newly found links to database
                 for link in links {
-                    unvisited_page(Arc::clone(&new_db_connection), &link).ok();
+                    unvisited_page(Arc::clone(&new_db_connection), &link, verbose).ok();
                 }
             }
         }));
@@ -141,7 +147,7 @@ mod tests {
 
         let path = gen_random_path();
 
-        run(start_urls, Some(path.to_str().unwrap()));
+        run(start_urls, Some(path.to_str().unwrap().to_string()), false);
 
         let conn = create_default_tables(path.to_str().unwrap()).unwrap();
 
@@ -163,7 +169,7 @@ mod tests {
 
         let path = gen_random_path();
 
-        run(start_urls, Some(path.to_str().unwrap()));
+        run(start_urls, Some(path.to_str().unwrap().to_string()), false);
 
         let conn = create_default_tables(path.to_str().unwrap()).unwrap();
 
@@ -237,7 +243,7 @@ mod tests {
 
         let conn = create_default_tables(path.to_str().unwrap()).unwrap();
 
-        run(start_urls, Some(path.to_str().unwrap()));
+        run(start_urls, Some(path.to_str().unwrap().to_string()), false);
 
         let res = get_values(&conn).unwrap();
 
@@ -264,7 +270,7 @@ mod tests {
 
         let conn = create_default_tables(path.to_str().unwrap()).unwrap();
 
-        run(start_urls, Some(path.to_str().unwrap()));
+        run(start_urls, Some(path.to_str().unwrap().to_string()), false);
 
         let res = get_values(&conn).unwrap();
 

@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use itertools::Itertools;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)] // Read from `Cargo.toml`
@@ -12,7 +13,21 @@ struct Cli {
 enum Commands {
     // start the indexer
     #[clap(about = "Starts the indexer")]
-    Start {},
+    Start {
+        #[clap(short, long, action, help = "output logs")]
+        verbose: bool,
+        #[clap(short, long, value_parser, help = "Sets the path for the database")]
+        db_path: Option<String>,
+        #[clap(
+            short,
+            long,
+            value_parser,
+            multiple_values = true,
+            help = "Start values to start the indexing from",
+            required = false
+        )]
+        start_values: Vec<String>,
+    },
     // search in the db for a value
     #[clap(about = "Searches the database for the keyword")]
     Search {
@@ -34,7 +49,11 @@ pub fn run() {
     let cli = Cli::parse();
 
     match &cli.commands {
-        Commands::Start {} => start(),
+        Commands::Start {
+            verbose,
+            db_path,
+            start_values,
+        } => start(*verbose, db_path.clone(), start_values.to_vec()),
         Commands::Search {
             search_word,
             amount,
@@ -42,8 +61,18 @@ pub fn run() {
     }
 }
 
-fn start() {
-    todo!()
+fn start(verbose: bool, db_path: Option<String>, start_urls: Vec<String>) {
+    if verbose {
+        println!("Starting Indexer...");
+    }
+
+    let start_urls = start_urls.iter().map(|x| x.as_str()).collect_vec();
+
+    crate::run(start_urls, db_path, verbose);
+
+    if verbose {
+        println!("Crawler finished");
+    }
 }
 
 fn search(search_word: &str, amount: u32) {

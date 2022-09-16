@@ -14,11 +14,16 @@ pub fn update_to_visited(
     id: i64,
     content: &str,
     links_to: Vec<&str>,
+    verbose: bool,
 ) -> Result<i64, rusqlite::Error> {
     conn.connection.execute(
         "UPDATE Ranking SET visited = true, content = ?1, links_to = ?2 WHERE id = ?3;",
         [content, &links_to.join(":::"), &id.to_string()],
     )?;
+
+    if verbose {
+        println!("Crawled webpage with id: {}", id);
+    }
 
     Ok(id)
 }
@@ -89,7 +94,7 @@ pub mod tests {
         let links_to = vec!["ep.ch", "lp.ch"].join(":::");
 
         // update value
-        update_to_visited(&conn, 1, content, vec!["ep.ch", "lp.ch"]).unwrap();
+        update_to_visited(&conn, 1, content, vec!["ep.ch", "lp.ch"], false).unwrap();
 
         // test if values have been updatet
         let row: (i64, String, String) = conn
