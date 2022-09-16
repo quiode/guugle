@@ -18,7 +18,7 @@ use crate::{
     },
 };
 
-pub fn run(start_urls: Vec<&str>, db_path: Option<String>, verbose: bool) {
+pub fn run(start_urls: Vec<&str>, db_path: Option<String>, verbose: bool, threads: u8) {
     let db_path = db_path.unwrap_or("./database.db3".to_owned());
 
     let conn = create_default_tables(&db_path).unwrap();
@@ -29,18 +29,17 @@ pub fn run(start_urls: Vec<&str>, db_path: Option<String>, verbose: bool) {
         unvisited_page(Arc::clone(&conn), url, verbose).unwrap();
     }
 
-    cmd_fn(conn, verbose)
+    cmd_fn(conn, verbose, threads)
 }
 
 /// # Command function
 ///
 /// 1. Stores all lists
 /// 2. creates threads to parse new websites
-fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>, verbose: bool) {
-    const THREAD_COUNT: i64 = 5;
+fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>, verbose: bool, thread_count: u8) {
     let mut threads = vec![];
 
-    for _ in 0..THREAD_COUNT {
+    for _ in 0..thread_count {
         let new_db_connection = Arc::clone(&db_connection);
 
         threads.push(thread::spawn(move || {
@@ -147,7 +146,12 @@ mod tests {
 
         let path = gen_random_path();
 
-        run(start_urls, Some(path.to_str().unwrap().to_string()), false);
+        run(
+            start_urls,
+            Some(path.to_str().unwrap().to_string()),
+            false,
+            5,
+        );
 
         let conn = create_default_tables(path.to_str().unwrap()).unwrap();
 
@@ -169,7 +173,12 @@ mod tests {
 
         let path = gen_random_path();
 
-        run(start_urls, Some(path.to_str().unwrap().to_string()), false);
+        run(
+            start_urls,
+            Some(path.to_str().unwrap().to_string()),
+            false,
+            5,
+        );
 
         let conn = create_default_tables(path.to_str().unwrap()).unwrap();
 
@@ -243,7 +252,12 @@ mod tests {
 
         let conn = create_default_tables(path.to_str().unwrap()).unwrap();
 
-        run(start_urls, Some(path.to_str().unwrap().to_string()), false);
+        run(
+            start_urls,
+            Some(path.to_str().unwrap().to_string()),
+            false,
+            5,
+        );
 
         let res = get_values(&conn).unwrap();
 
@@ -270,7 +284,12 @@ mod tests {
 
         let conn = create_default_tables(path.to_str().unwrap()).unwrap();
 
-        run(start_urls, Some(path.to_str().unwrap().to_string()), false);
+        run(
+            start_urls,
+            Some(path.to_str().unwrap().to_string()),
+            false,
+            5,
+        );
 
         let res = get_values(&conn).unwrap();
 

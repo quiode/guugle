@@ -27,6 +27,8 @@ enum Commands {
             required = false
         )]
         start_values: Vec<String>,
+        #[clap(value_parser = clap::value_parser!(u8), help = "Amount of threads to use", default_value_t = 8)]
+        threads: u8,
     },
     // search in the db for a value
     #[clap(about = "Searches the database for the keyword")]
@@ -53,7 +55,8 @@ pub fn run() {
             verbose,
             db_path,
             start_values,
-        } => start(*verbose, db_path.clone(), start_values.to_vec()),
+            threads,
+        } => start(*verbose, db_path.clone(), start_values.to_vec(), *threads),
         Commands::Search {
             search_word,
             amount,
@@ -61,14 +64,14 @@ pub fn run() {
     }
 }
 
-fn start(verbose: bool, db_path: Option<String>, start_urls: Vec<String>) {
+fn start(verbose: bool, db_path: Option<String>, start_urls: Vec<String>, threads: u8) {
     if verbose {
         println!("Starting Indexer...");
     }
 
     let start_urls = start_urls.iter().map(|x| x.as_str()).collect_vec();
 
-    crate::run(start_urls, db_path, verbose);
+    crate::run(start_urls, db_path, verbose, threads);
 
     if verbose {
         println!("Crawler finished");

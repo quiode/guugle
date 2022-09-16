@@ -7,7 +7,7 @@
 - [x] restructure library
 - [ ] create cli tool 
 - - [ ] option to configure the search
-- - - amount of threads
-- - - default location
-- [ ] write tests for each function
+- - - [x] amount of threads
+- - - [x] default location
+- [x] write tests for each function
 - [ ] document crate better
