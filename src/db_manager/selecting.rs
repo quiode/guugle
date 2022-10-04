@@ -78,6 +78,7 @@ pub fn get_values(conn: &DatabaseConnection) -> Result<Vec<Ranking>, rusqlite::E
 pub fn find(
     conn: &DatabaseConnection,
     search_value: &str,
+    amount: u32,
 ) -> Result<Vec<Ranking>, rusqlite::Error> {
     let keywords: Vec<&str> = search_value.split(" ").collect();
     let mut url_search_statement = String::new();
@@ -92,7 +93,7 @@ pub fn find(
     content_search_statement.push_str(" FALSE ");
 
     let mut statement = conn.connection.prepare(&format!(
-        "SELECT * FROM Ranking WHERE {url_search_statement} OR {content_search_statement};"
+        "SELECT * FROM Ranking WHERE {url_search_statement} OR {content_search_statement} LIMIT {amount};"
     ))?;
 
     let results = statement.query_map((), |row| {
@@ -295,7 +296,7 @@ pub mod tests {
 
         gen_vals(&conn);
 
-        let test_results = find(&conn, "crystal").unwrap();
+        let test_results = find(&conn, "crystal", 10).unwrap();
 
         assert_eq!(test_results.len(), 3);
 

@@ -132,9 +132,8 @@ fn cmd_fn(db_connection: Arc<Mutex<DatabaseConnection>>, verbose: bool, thread_c
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::hash_map::DefaultHasher, fs, hash::Hash};
+    use std::fs;
 
-    use hex::{encode, ToHex};
     use sha2::{Digest, Sha256};
 
     use super::run;

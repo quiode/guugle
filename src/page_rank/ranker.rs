@@ -8,6 +8,7 @@ use crate::db_manager::{
 
 use super::helper::{compute_rank, compute_search_word_appearance};
 
+#[derive(Debug)]
 pub struct RankedPage {
     rank: usize,
     page: Ranking,
@@ -17,8 +18,9 @@ pub struct RankedPage {
 pub fn rank_pages(
     conn: &DatabaseConnection,
     search_word: &str,
+    amount: u32,
 ) -> Result<Vec<RankedPage>, rusqlite::Error> {
-    let matches = find(conn, search_word)?;
+    let matches = find(conn, search_word, amount)?;
 
     let mut ranking = vec![];
 
@@ -77,7 +79,7 @@ mod tests {
 
         gen_vals(&conn);
 
-        let result = rank_pages(&conn, "team").unwrap();
+        let result = rank_pages(&conn, "team", 10).unwrap();
 
         assert_eq!(result.len(), 3);
 
@@ -94,7 +96,7 @@ mod tests {
 
         gen_vals(&conn);
 
-        let result = rank_pages(&conn, "anim tempor fugiat deserunt est").unwrap();
+        let result = rank_pages(&conn, "anim tempor fugiat deserunt est", 10).unwrap();
 
         fs::remove_file(path).unwrap();
 
